@@ -73,20 +73,30 @@ func initializeAppConfig() error {
 	// - CLI arguments have precedence over ENV, i.e. those starting with "O2TOKEN_"
 	// - specified variables (CLI or ENV) will never be automatically derived
 
-	// Read from CLI or ENV
+	// Read from CLI or ENV (let ENV show as default if defined - but not for random/secret fields because they show up in --help)
 	authEndpointPtr := flag.String("auth_endpoint", parseStringEnvVar("", "O2TOKEN_AUTH_ENDPOINT"), "Authorization endpoint")
-	callbackPathPtr := flag.String("callback_path", parseStringEnvVar("/oauth2/callback", "O2TOKEN_CALLBACK_PATH"), "Oauth2 callback path (default: /oauth2/callback)")
+	callbackPathPtr := flag.String("callback_path", parseStringEnvVar("/oauth2/callback", "O2TOKEN_CALLBACK_PATH"), "Oauth2 callback path")
 	clientIDPtr := flag.String("client_id", parseStringEnvVar("", "O2TOKEN_CLIENT_ID"), "Client (aka application) id ")
-	clientSecretPtr := flag.String("client_secret", parseStringEnvVar("", "O2TOKEN_CLIENT_SECRET"), "Client secret (if applicable)")
+	clientSecretPtr := flag.String("client_secret", "", "Client secret (if applicable)")
 	metadataEndpointPtr := flag.String("metadata_endpoint", parseStringEnvVar("", "O2TOKEN_METADATA_ENDPOINT"), "IDP base URL")
-	portPtr := flag.Uint("port", parseUintEnvVar(8080, "O2TOKEN_PORT"), "Local server port (default: 8080)")
+	portPtr := flag.Uint("port", parseUintEnvVar(8080, "O2TOKEN_PORT"), "Local server port")
 	tokenEndpointPtr := flag.String("token_endpoint", parseStringEnvVar("", "O2TOKEN_TOKEN_ENDPOINT"), "Token endpoint")
-	statePtr := flag.String("state", parseStringEnvVar(genRandStr(), "O2TOKEN_STATE"), "Oauth2 state string (default: <random>)")
-	scopePtr := flag.String("scope", parseStringEnvVar("openid,offline_access", "O2TOKEN_SCOPE"), "Access scope (default: openid,offline_access)")
-	verbosePtr := flag.Bool("verbose", parseBoolEnvVar(false, "O2TOKEN_VERBOSE"), "Print progress and decoded/interpreted tokens (default: false)")
-	userInfoPtr := flag.Bool("userinfo", parseBoolEnvVar(false, "O2TOKEN_USERINFO"), "Fetch user info after obtaining the access token (default: false)")
+	statePtr := flag.String("state", parseStringEnvVar("", "O2TOKEN_STATE"), "Oauth2 state string (default <random>)")
+	scopePtr := flag.String("scope", parseStringEnvVar("openid,offline_access", "O2TOKEN_SCOPE"), "Access scope")
+	verbosePtr := flag.Bool("verbose", parseBoolEnvVar(false, "O2TOKEN_VERBOSE"), "Print progress and decoded/interpreted tokens")
+	userInfoPtr := flag.Bool("userinfo", parseBoolEnvVar(false, "O2TOKEN_USERINFO"), "Fetch user info after obtaining the access token")
 	userInfoEndpointPtr := flag.String("userinfo_endpoint", parseStringEnvVar("", "O2TOKEN_USERINFO_ENDPOINT"), "User info endpoint")
 	flag.Parse()
+
+	// Handle special defaults (random/secrets)
+	if *clientSecretPtr == "" {
+		secretStr := parseStringEnvVar("", "O2TOKEN_CLIENT_SECRET")
+		clientSecretPtr = &secretStr
+	}
+	if *statePtr == "" {
+		randStr := genRandStr()
+		statePtr = &randStr
+	}
 
 	// Derive unspecified fields based on IDP's metadata
 	if len(*metadataEndpointPtr) > 0 {
@@ -125,7 +135,7 @@ func initializeAppConfig() error {
 	}
 
 	// Some level of input validation...
-	var retVal error 
+	var retVal error
 	if appConfig.AuthEndpoint == "" || appConfig.TokenEndpoint == "" {
 		retVal = fmt.Errorf("Authorization/Token endpoints not configured")
 	} else if appConfig.Port == 0 || appConfig.Port > 65535 {
@@ -191,9 +201,9 @@ func parseUintEnvVar(defaultValue uint, envVar string) uint {
 
 func genRandStr() string {
 	s := rand.NewSource(time.Now().UnixNano())
-  r := rand.New(s)
-	h := func () string {
-		v:= r.Intn(0x10000)
+	r := rand.New(s)
+	h := func() string {
+		v := r.Intn(0x10000)
 		return fmt.Sprintf("%04x", v)
 	}
 	return fmt.Sprintf("%v%v%v%v", h(), h(), h(), h())
@@ -235,7 +245,7 @@ func serveAuthCodeFlow() {
 	mux := http.NewServeMux()
 	fs := http.FileServer(http.Dir("public"))
 	mux.Handle("/", noCache(fs))
-	mux.HandleFunc(appConfig.CallbackPath , oauth2Callback)
+	mux.HandleFunc(appConfig.CallbackPath, oauth2Callback)
 	mux.HandleFunc("/login", startFlow)
 
 	portStr := fmt.Sprintf(":%v", appConfig.Port)
@@ -327,7 +337,7 @@ func oauth2Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	code := r.FormValue("code")
-	
+
 	// Confirm valid state (the only type of "auth verification" done in this app)
 	state := r.FormValue("state")
 	if state != appConfig.State {
@@ -382,7 +392,7 @@ func oauth2Callback(w http.ResponseWriter, r *http.Request) {
 	if appConfig.UserInfo {
 		fmt.Fprintf(os.Stderr, "NOTE: support for UserInfo is not in place -> skipping\n")
 	}
-	
+
 	// Finally, send a response to redirect the user to the "success" page
 	http.Redirect(w, r, "/success.html", http.StatusFound)
 
