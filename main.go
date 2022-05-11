@@ -26,6 +26,7 @@ type OAuthAccessResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
 	IDToken      string `json:"id_token"`
+	UserInfo     map[string]interface{} `json:"user_info"` // actually not part of the oauth2 token response but added for (output) convenience
 }
 
 // Only a few fields defined here (the ones used by the app)
@@ -346,7 +347,7 @@ func oauth2Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Next, lets for the HTTP request to call the github oauth endpoint to get our access token
+	// Next, lets do the HTTP request to call the idp oauth2 endpoint to get our access token
 	// Params as form-data in POST: https://golang.cafe/blog/how-to-make-http-url-form-encoded-request-golang.html
 	data := url.Values{}
 	data.Set("grant_type", "authorization_code")
@@ -377,10 +378,6 @@ func oauth2Callback(w http.ResponseWriter, r *http.Request) {
 
 	bodyBytes, _ := io.ReadAll(res.Body)
 
-	// if appConfig.Verbose {
-	// 	fmt.Printf("\nRaw response body:\n%v\n\n", string(bodyBytes))
-	// }
-
 	// Parse the request body into the `OAuthAccessResponse` struct
 	var t OAuthAccessResponse
 	if err := json.Unmarshal(bodyBytes, &t); err != nil {
@@ -388,9 +385,35 @@ func oauth2Callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: add actual support
+	if t.AccessToken == "" {
+		err := fmt.Errorf("Raw response: %v", string(bodyBytes))
+		reportErrorAndSoftExit("Could not redeem tokens", err, http.StatusBadRequest, w)
+		fmt.Fprintf(os.Stderr, "%v\n", err)
+		return
+	}
+
 	if appConfig.UserInfo {
-		fmt.Fprintf(os.Stderr, "NOTE: support for UserInfo is not in place -> skipping\n")
+		req, err := http.NewRequest(http.MethodGet, appConfig.UserInfoEndpoint, nil)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: could not create request for userinfo: %v", err)
+		} else {
+			req.Header.Set("accept", "application/json")
+			req.Header.Add("Authorization", "Bearer " + t.AccessToken)
+			res, err := httpClient.Do(req)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "WARNING: could not send request for userinfo: %v", err)
+			} else {
+				defer res.Body.Close()
+				if appConfig.Verbose {
+					fmt.Printf("Sent GET request for UserInfo\n")
+				}
+				bodyBytes, _ := io.ReadAll(res.Body)
+				err = json.Unmarshal(bodyBytes,&(t.UserInfo))
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "WARNING: could not parse userinfo response: %v", err)
+				}
+			}			
+		}
 	}
 
 	// Finally, send a response to redirect the user to the "success" page
