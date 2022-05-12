@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"os/signal"
 	"strconv"
 	"strings"
@@ -42,6 +43,7 @@ type AppConfig struct {
 	ClientID         string `json:"client_id"`
 	ClientSecret     string `json:"client_secret"`
 	MetadataEndpoint string `json:"metadata_endpoint"`
+	NoBrowser        bool   `json:"no_browser"`
 	Port             uint   `json:"oauth2_port"`
 	Scope            string `json:"scope"`
 	State            string `json:"state"`
@@ -80,6 +82,7 @@ func initializeAppConfig() error {
 	clientIDPtr := flag.String("client_id", parseStringEnvVar("", "O2TOKEN_CLIENT_ID"), "Client (aka application) id ")
 	clientSecretPtr := flag.String("client_secret", "", "Client secret (if applicable)")
 	metadataEndpointPtr := flag.String("metadata_endpoint", parseStringEnvVar("", "O2TOKEN_METADATA_ENDPOINT"), "IDP base URL")
+	noBrowserPtr := flag.Bool("no-browser", parseBoolEnvVar(false, "O2TOKEN_NO_BROWSER"), "Prevent automatic launch of browser for login URL")
 	portPtr := flag.Uint("port", parseUintEnvVar(8080, "O2TOKEN_PORT"), "Local server port")
 	tokenEndpointPtr := flag.String("token_endpoint", parseStringEnvVar("", "O2TOKEN_TOKEN_ENDPOINT"), "Token endpoint")
 	statePtr := flag.String("state", parseStringEnvVar("", "O2TOKEN_STATE"), "Oauth2 state string (default <random>)")
@@ -126,6 +129,7 @@ func initializeAppConfig() error {
 		ClientID:         *clientIDPtr,
 		ClientSecret:     *clientSecretPtr,
 		MetadataEndpoint: *metadataEndpointPtr,
+		NoBrowser:        *noBrowserPtr,
 		Port:             *portPtr,
 		State:            *statePtr,
 		Scope:            scopeStr,
@@ -250,13 +254,28 @@ func serveAuthCodeFlow() {
 	mux.HandleFunc("/login", startFlow)
 
 	portStr := fmt.Sprintf(":%v", appConfig.Port)
+	loginUrlStr := fmt.Sprintf("http://localhost%v/login\n", portStr) 
 	server := &http.Server{Addr: portStr, Handler: mux}
 
 	go func() {
-		fmt.Fprintf(os.Stderr, "Serving oauth2 authorization code flow at 👉 http://localhost%v/login\n", portStr)
+		fmt.Fprintf(os.Stderr, "Serving oauth2 authorization code flow at 👉 %v\n", loginUrlStr)
 		serveErr := server.ListenAndServe()
 		if serveErr != http.ErrServerClosed {
 			fmt.Fprintf(os.Stderr, "Unexpected error from HTTP server: %v\n", serveErr)
+		}
+	}()
+
+	go func() {
+		if appConfig.NoBrowser == false {
+			time.Sleep(10 * time.Millisecond) // ensure proper print-out order (a bit dirty...)
+			if appConfig.Verbose {
+				fmt.Printf("Launching browser window for login flow\n")
+			}
+			browserCmd := exec.Command("python3", "-m", "webbrowser", "-n", loginUrlStr)
+			err := browserCmd.Run()
+			if err != nil {
+				fmt.Fprintf(os.Stderr,"Couldn't launch browser automatically; %v\n", err)
+			}
 		}
 	}()
 
