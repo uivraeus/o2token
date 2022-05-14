@@ -17,7 +17,7 @@ type OAuthAccessResponse struct {
 	AccessToken  string   `json:"access_token"`
 	RefreshToken string   `json:"refresh_token"`
 	IDToken      string   `json:"id_token"`
-	UserInfo     unstruct `json:"userinfo"` // actually not part of the oauth2 token response but added for (output) convenience
+	UserInfo     unstruct `json:"userinfo,omitempty"` // actually not part of the oauth2 token response but added for (output) convenience
 }
 
 // Only a few fields defined here (the ones used by the app)
