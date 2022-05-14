@@ -1,4 +1,4 @@
-.devcontainer/
+.devcontainer
 bak.*
 dev.env
 o2token
