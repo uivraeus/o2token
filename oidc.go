@@ -28,32 +28,32 @@ type OidcMetadata struct {
 }
 
 func fetchMetadataDocument(metadataUrl string) OidcMetadata {
-	emtpy := OidcMetadata{}
+	empty := OidcMetadata{}
 	httpClient := http.Client{}
 
 	req, err := http.NewRequest(http.MethodGet, metadataUrl, nil)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not create request for metadata document: %v", err)
-		return emtpy
+		return empty
 	}
 	req.Header.Set("accept", "application/json")
 
 	res, err := httpClient.Do(req)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Could not send request for metadata document: %v", err)
-		return emtpy
+		return empty
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		fmt.Fprintf(os.Stderr, "Unexpected status code for %v: %v\n", metadataUrl, res.StatusCode)
-		return emtpy
+		return empty
 	}
 
 	var retVal OidcMetadata
 	if err := json.NewDecoder(res.Body).Decode(&retVal); err != nil {
 		fmt.Fprintf(os.Stderr, "Could not parse metadata document response: %v", err)
-		return emtpy
+		return empty
 	}
 
 	return retVal
@@ -96,7 +96,7 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Next, call the idp oauth2 token endpoint to get our tokens
-	tokens, err := redeemTokens(code)
+	tokens, err := redeemTokensWithCode(code)
 	if err != nil {
 		reportErrorAndSoftExit("oath2 flow error", err, http.StatusInternalServerError, w)
 		return
@@ -125,6 +125,29 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 	softExit(0)
 }
 
+func refreshTokens(refreshToken string) error {
+	tokens, err := redeemTokensWithRefreshToken(refreshToken)
+	if err != nil {
+		return fmt.Errorf("could not redeem tokens: %v", err)
+	}
+
+	if appConfig.UserInfo {
+		var err error
+		tokens.UserInfo, err = fetchUserInfo(tokens.AccessToken)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "WARNING: %v\n", err) // no show-stopper; log and continue the flow
+		}
+	}
+
+	// Print result to stdout
+	err = printTokens(tokens)
+	if err != nil {
+		return fmt.Errorf("output error: %v", err)
+	}
+
+	return nil
+}
+
 func printTokens(tokens OAuthAccessResponse) error {
 	resultJson, err := json.MarshalIndent(tokens, "", "  ")
 	if err != nil {
@@ -147,18 +170,32 @@ func printTokens(tokens OAuthAccessResponse) error {
 	return nil
 }
 
-func redeemTokens(code string) (OAuthAccessResponse, error) {
+func redeemTokensWithCode(code string) (OAuthAccessResponse, error) {
+	params := url.Values{}
+	params.Set("grant_type", "authorization_code")
+	params.Set("redirect_uri", fmt.Sprintf("http://localhost:%v%v", appConfig.Port, appConfig.CallbackPath))
+	params.Set("client_id", appConfig.ClientID)
+	params.Set("client_secret", appConfig.ClientSecret)
+	params.Set("code", code)
+
+	return redeemTokens(params)
+}
+
+func redeemTokensWithRefreshToken(token string) (OAuthAccessResponse, error) {
+	params := url.Values{}
+	params.Set("grant_type", "refresh_token")
+	params.Set("client_id", appConfig.ClientID)
+	params.Set("client_secret", appConfig.ClientSecret)
+	params.Set("refresh_token", token)
+
+	return redeemTokens(params)
+}
+
+func redeemTokens(params url.Values) (OAuthAccessResponse, error) {
 	nothing := OAuthAccessResponse{}
 
-	// Params as form-data in POST: https://golang.cafe/blog/how-to-make-http-url-form-encoded-request-golang.html
-	data := url.Values{}
-	data.Set("grant_type", "authorization_code")
-	data.Set("redirect_uri", fmt.Sprintf("http://localhost:%v%v", appConfig.Port, appConfig.CallbackPath))
-	data.Set("client_id", appConfig.ClientID)
-	data.Set("client_secret", appConfig.ClientSecret)
-	data.Set("code", code)
-
-	req, err := http.NewRequest(http.MethodPost, appConfig.TokenEndpoint, strings.NewReader(data.Encode()))
+	// Params as form-params in POST: https://golang.cafe/blog/how-to-make-http-url-form-encoded-request-golang.html
+	req, err := http.NewRequest(http.MethodPost, appConfig.TokenEndpoint, strings.NewReader(params.Encode()))
 	if err != nil {
 		return nothing, fmt.Errorf("could not create HTTP request to redeem tokens: %v", err)
 	}

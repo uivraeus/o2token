@@ -19,6 +19,7 @@ type AppConfig struct {
 	MetadataEndpoint string `json:"metadata_endpoint"`
 	NoBrowser        bool   `json:"no_browser"`
 	Port             uint   `json:"oauth2_port"`
+	RefreshToken     string `json:"refresh_token"`
 	Scope            string `json:"scope"`
 	State            string `json:"state"`
 	TokenEndpoint    string `json:"token_endpoint"`
@@ -41,6 +42,7 @@ func initializeAppConfig() (AppConfig, error) {
 	noBrowserPtr := flag.Bool("no-browser", parseBoolEnvVar(false, "O2TOKEN_NO_BROWSER"), "Prevent automatic launch of browser for login URL")
 	portPtr := flag.Uint("port", parseUintEnvVar(8080, "O2TOKEN_PORT"), "Local server port")
 	tokenEndpointPtr := flag.String("token_endpoint", parseStringEnvVar("", "O2TOKEN_TOKEN_ENDPOINT"), "Token endpoint")
+	refreshTokenPtr := flag.String("refresh_token", parseStringEnvVar("", "O2TOKEN_REFRESH_TOKEN"), "Refresh token to use when requesting new tokens")
 	statePtr := flag.String("state", parseStringEnvVar("", "O2TOKEN_STATE"), "Oauth2 state string (default <random>)")
 	scopePtr := flag.String("scope", parseStringEnvVar("openid,offline_access", "O2TOKEN_SCOPE"), "Access scope")
 	verbosePtr := flag.Bool("verbose", parseBoolEnvVar(false, "O2TOKEN_VERBOSE"), "Print progress and decoded/interpreted tokens")
@@ -87,6 +89,7 @@ func initializeAppConfig() (AppConfig, error) {
 		MetadataEndpoint: *metadataEndpointPtr,
 		NoBrowser:        *noBrowserPtr,
 		Port:             *portPtr,
+		RefreshToken:     *refreshTokenPtr,
 		State:            *statePtr,
 		Scope:            scopeStr,
 		TokenEndpoint:    *tokenEndpointPtr,
@@ -112,12 +115,17 @@ func initializeAppConfig() (AppConfig, error) {
 	}
 
 	if config.Verbose || retErr != nil {
-		// temporary hide the secret
+		// temporary hide the secret and most of the refresh token (if provided)
 		tempSecret := config.ClientSecret
+		tempRefresh := config.RefreshToken
 		config.ClientSecret = strings.Repeat("*", len(tempSecret))
+		if len(config.RefreshToken) > 15 {
+			config.RefreshToken = config.RefreshToken[0:15] + "..."
+		}
 		configOutput, _ := json.MarshalIndent(config, "", "  ")
 		fmt.Printf("Running with the specified/derived configuration:\n%v\n", string(configOutput))
 		config.ClientSecret = tempSecret
+		config.RefreshToken = tempRefresh
 	}
 
 	return config, retErr

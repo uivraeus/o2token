@@ -13,7 +13,14 @@ Not at all. They are accepted "as is" from the IDP endpoint (it's HTTPS... why s
 ## OK, so how do I use it?
 
 ```shell
-go run main.go --help
+go run . --help
+```
+
+Or build the binary first
+
+```shell
+go build -o o2token
+./o2token --help
 ```
 
 Note that all CLI parameter can be replaced by environment variables starting with `O2TOKEN_`.
@@ -21,3 +28,16 @@ Note that all CLI parameter can be replaced by environment variables starting wi
 ***Example:*** `--callback_path` can be replaced by defining `O2TOKEN_CALLBACK_PATH`. 
 
 CLI parameters will always have precedence over environment variables.
+
+## Examples
+
+### Eternal refresh loop
+
+By including the `offline_access` and extracting the `refresh_token` from the response it is possible to obtain new tokens, again and again, by running this command (assuming that IDP and client id/secret details are defined via `O2TOKEN_` environment variables).
+
+```shell
+export O2TOKEN_REFRESH_TOKEN=$(./o2token --verbose=false | tee /dev/tty | jq -r '.refresh_token')
+```
+
+If the `O2TOKEN_REFRESH_TOKEN` variable is empty (e.g. the first time), a normal OAuth2 code flow is initiated. After that the refresh flow will be triggered each time the command is run.
+

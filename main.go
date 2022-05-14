@@ -22,7 +22,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	serveAuthCodeFlow()
+	if appConfig.RefreshToken != "" {
+		err := refreshTokens(appConfig.RefreshToken)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: token refresh failed: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		serveAuthCodeFlow()
+	}
 }
 
 // Initiate a controlled shutdown of the application (allow for gracefull http server teardown)
