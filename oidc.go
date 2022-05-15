@@ -63,7 +63,7 @@ func startFlow(w http.ResponseWriter, r *http.Request) {
 	// Redirect to authorization endpoint
 	redirectUri := fmt.Sprintf("http://localhost:%v%v", appConfig.Port, appConfig.CallbackPath)
 	scope := url.QueryEscape(appConfig.Scope)
-	url := fmt.Sprintf("%v/?client_id=%v&redirect_uri=%v&scope=%v&response_type=code&state=%v", appConfig.AuthEndpoint, appConfig.ClientID, redirectUri, scope, appConfig.State)
+	url := fmt.Sprintf("%v?client_id=%v&redirect_uri=%v&scope=%v&response_type=code&state=%v", appConfig.AuthEndpoint, appConfig.ClientID, redirectUri, scope, appConfig.State)
 	if appConfig.Verbose {
 		fmt.Printf("Redirecting user to authorization endpoint:\n%v\n", url)
 	}
