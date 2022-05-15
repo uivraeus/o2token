@@ -200,6 +200,7 @@ func redeemTokens(params url.Values) (OAuthAccessResponse, error) {
 		return nothing, fmt.Errorf("could not create HTTP request to redeem tokens: %v", err)
 	}
 
+	req.Header.Set("content-type", "application/x-www-form-urlencoded")
 	req.Header.Set("accept", "application/json")
 
 	httpClient := http.Client{}
