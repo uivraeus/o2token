@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 type OAuthAccessResponse struct {
@@ -111,7 +112,7 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Finally, send a response to redirect the user to the "success" page
-	http.Redirect(w, r, "/success.html", http.StatusFound)
+	http.Redirect(w, r, successPath, http.StatusFound)
 
 	// Print result to stdout
 	err = printTokens(tokens)
@@ -121,8 +122,12 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We're done
-	softExit(0)
+	// We're done, give the browser time to process the redirect and then shut down
+	// (Go-routine here so that the callback can end -> serve the redirect)
+	go func() {
+		time.Sleep(1 * time.Second)
+		softExit(0)
+	}()
 }
 
 func refreshTokens(refreshToken string) error {

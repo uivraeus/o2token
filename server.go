@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,12 +10,24 @@ import (
 	"time"
 )
 
+//Embed html for the served endpoints to make the binary self-standing
+
+//go:embed html/index.html
+var indexPage string
+
+//go:embed html/success.html
+var successPage string
+
+var indexPath = "/"
+var loginPath = "/login"
+var successPath = "/success"
+
 func serveAuthCodeFlow() {
 	mux := http.NewServeMux()
-	fs := http.FileServer(http.Dir("public"))
-	mux.Handle("/", noCache(fs))
+	mux.HandleFunc(successPath, serveEmbeddedPage)
 	mux.HandleFunc(appConfig.CallbackPath, oauth2CodeCallback)
-	mux.HandleFunc("/login", startFlow)
+	mux.HandleFunc(loginPath, startFlow)
+	mux.HandleFunc(indexPath, serveEmbeddedPage)
 
 	portStr := fmt.Sprintf(":%v", appConfig.Port)
 	loginUrlStr := fmt.Sprintf("http://localhost%v/login\n", portStr)
@@ -49,42 +62,19 @@ func serveAuthCodeFlow() {
 	}
 }
 
-// https://stackoverflow.com/questions/33880343/go-webserver-dont-cache-files-using-timestamp
-func noCache(h http.Handler) http.Handler {
-	var epoch = time.Unix(0, 0).Format(time.RFC1123)
-	var noCacheHeaders = map[string]string{
-		"Expires":         epoch,
-		"Cache-Control":   "no-cache, private, max-age=0",
-		"Pragma":          "no-cache",
-		"X-Accel-Expires": "0",
+func serveEmbeddedPage(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == indexPath {
+		serveString(indexPage, w)
+	} else if r.URL.Path == successPath {
+		serveString(successPage, w)
+	} else {
+		w.WriteHeader(http.StatusNotFound)
 	}
+}
 
-	var etagHeaders = []string{
-		"ETag",
-		"If-Modified-Since",
-		"If-Match",
-		"If-None-Match",
-		"If-Range",
-		"If-Unmodified-Since",
-	}
-
-	fn := func(w http.ResponseWriter, r *http.Request) {
-		// Delete any ETag headers that may have been set
-		for _, v := range etagHeaders {
-			if r.Header.Get(v) != "" {
-				r.Header.Del(v)
-			}
-		}
-
-		// Set our NoCache headers
-		for k, v := range noCacheHeaders {
-			w.Header().Set(k, v)
-		}
-
-		h.ServeHTTP(w, r)
-	}
-
-	return http.HandlerFunc(fn)
+func serveString(value string, w http.ResponseWriter) {
+	w.WriteHeader(http.StatusOK)
+	w.Write(([]byte)(value))
 }
 
 func reportErrorAndSoftExit(label string, err error, code int, w http.ResponseWriter) {
