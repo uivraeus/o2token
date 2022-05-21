@@ -25,7 +25,7 @@ go build -o o2token
 
 Note that all CLI parameter can be replaced by environment variables starting with `O2TOKEN_`.
 
-***Example:*** `--callback_path` can be replaced by defining `O2TOKEN_CALLBACK_PATH`. 
+***Example:*** `--callback-path` can be replaced by defining `O2TOKEN_CALLBACK_PATH`. 
 
 CLI parameters will always have precedence over environment variables.
 
