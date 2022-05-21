@@ -8,18 +8,18 @@ Not really. But it's simple and usually works.
 
 ## How are the received tokens verified?
 
-Not at all. They are accepted "as is" from the IDP endpoint (it's HTTPS... why should you not trust them?)
+Not at all. Any token is accepted "as is" from the IDP endpoint (it's HTTPS... why should you not trust them?)
 
 ## OK, so how do I use it?
 
 ```shell
-go run . --help
+make run --help
 ```
 
 Or build the binary first
 
 ```shell
-go build -o o2token
+make
 ./o2token --help
 ```
 
