@@ -12,16 +12,18 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	h "o2token/helpers"
 )
 
 type OAuthAccessResponse struct {
-	TokenType    string   `json:"token_type"`
-	Scope        string   `json:"scope"`
-	ExpiresIn    int      `json:"expires_in"`
-	AccessToken  string   `json:"access_token"`
-	RefreshToken string   `json:"refresh_token"`
-	IDToken      string   `json:"id_token"`
-	UserInfo     unstruct `json:"userinfo,omitempty"` // actually not part of the oauth2 token response but added for (output) convenience
+	TokenType    string     `json:"token_type"`
+	Scope        string     `json:"scope"`
+	ExpiresIn    int        `json:"expires_in"`
+	AccessToken  string     `json:"access_token"`
+	RefreshToken string     `json:"refresh_token"`
+	IDToken      string     `json:"id_token"`
+	UserInfo     h.Unstruct `json:"userinfo,omitempty"` // actually not part of the oauth2 token response but added for (output) convenience
 }
 
 // Only a few fields defined here (the ones used by the app)
@@ -170,10 +172,10 @@ func printTokens(tokens OAuthAccessResponse) error {
 	fmt.Println(string(resultJson))
 
 	if appConfig.Verbose {
-		fmt.Printf("\nSuccessful operation, received tokens expire in %v\n", secondsToFriendlyString(tokens.ExpiresIn))
+		fmt.Printf("\nSuccessful operation, received tokens expire in %v\n", h.SecondsToFriendlyString(tokens.ExpiresIn))
 		interpret := func(token string) string {
 			epochKeys := []string{"iat", "nbf", "exp", "xms_tcdt"} // xms_tcdt is probably azure proprietary
-			return injectEpochFieldComments(prettyJson(jwtToString(tokens.AccessToken)), epochKeys)
+			return h.InjectEpochFieldComments(h.PrettyJson(h.JwtToString(tokens.AccessToken)), epochKeys)
 		}
 		if len(tokens.AccessToken) > 0 {
 			fmt.Printf("\nAccessToken:\n------------\n%v\n", interpret(tokens.AccessToken))
@@ -243,7 +245,7 @@ func redeemTokens(params url.Values) (OAuthAccessResponse, error) {
 	return tokens, nil
 }
 
-func fetchUserInfo(accessToken string) (unstruct, error) {
+func fetchUserInfo(accessToken string) (h.Unstruct, error) {
 	req, err := http.NewRequest(http.MethodGet, appConfig.UserInfoEndpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("could not create request for userinfo: %v", err)
@@ -263,7 +265,7 @@ func fetchUserInfo(accessToken string) (unstruct, error) {
 	}
 
 	bodyBytes, _ := io.ReadAll(res.Body)
-	var retVal unstruct
+	var retVal h.Unstruct
 	err = json.Unmarshal(bodyBytes, &retVal)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse userinfo response: %v", err)
@@ -297,5 +299,5 @@ func genPkceCodeVerifier() string {
 func computePkceCodeChallenge(verifier string) string {
 	hash := sha256.Sum256([]byte(verifier))
 	b64 := base64.StdEncoding.EncodeToString(hash[:])
-	return base64ToBase64Url(b64)
+	return h.Base64ToBase64Url(b64)
 }

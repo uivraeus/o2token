@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"time"
 )
@@ -86,4 +87,15 @@ func reportErrorAndSoftExit(label string, err error, code int, w http.ResponseWr
 	}
 	fmt.Fprintln(os.Stderr, msg)
 	softExit(code)
+}
+
+func launchBrowser(url string) {
+	if appConfig.Verbose {
+		fmt.Printf("Launching browser window")
+	}
+	browserCmd := exec.Command("python3", "-m", "webbrowser", "-n", url)
+	err := browserCmd.Run()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Couldn't launch browser automatically; %v\n", err)
+	}
 }

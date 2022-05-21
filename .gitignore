@@ -2,3 +2,4 @@
 bak.*
 *dev.env
 o2token
+jwt/jwt
