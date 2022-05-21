@@ -16,8 +16,11 @@ type AppConfig struct {
 	CallbackPath     string `json:"callback_path"`
 	ClientID         string `json:"client_id"`
 	ClientSecret     string `json:"client_secret"`
+	CodeChallenge    string `json:"code_challenge"`
+	CodeVerifier     string `json:"code_verifier"`
 	MetadataEndpoint string `json:"metadata_endpoint"`
 	NoBrowser        bool   `json:"no_browser"`
+	Pkce             bool   `json:"pkce"`
 	Port             uint   `json:"oauth2_port"`
 	RefreshToken     string `json:"refresh_token"`
 	Scope            string `json:"scope"`
@@ -38,8 +41,11 @@ func initializeAppConfig() (AppConfig, error) {
 	callbackPathPtr := flag.String("callback_path", parseStringEnvVar("/oauth2/callback", "O2TOKEN_CALLBACK_PATH"), "Oauth2 callback path")
 	clientIDPtr := flag.String("client_id", parseStringEnvVar("", "O2TOKEN_CLIENT_ID"), "Client (aka application) id ")
 	clientSecretPtr := flag.String("client_secret", "", "Client secret (if applicable)")
+	codeChallengePtr := flag.String("code_challenge", "", "PKCE Code Challenge (default <derived from verifier> when PKCE is enabled)")
+	codeVerifierPtr := flag.String("code_verifier", "", "PKCE Code Verifier (default <random> when PKCE is enabled)")
 	metadataEndpointPtr := flag.String("metadata_endpoint", parseStringEnvVar("", "O2TOKEN_METADATA_ENDPOINT"), "IDP base URL")
 	noBrowserPtr := flag.Bool("no-browser", parseBoolEnvVar(false, "O2TOKEN_NO_BROWSER"), "Prevent automatic launch of browser for login URL")
+	pkcePtr := flag.Bool("pkce", parseBoolEnvVar(true, "O2TOKEN_PKCE"), "Use Oauth2 with PKCE (S256)")
 	portPtr := flag.Uint("port", parseUintEnvVar(8080, "O2TOKEN_PORT"), "Local server port")
 	tokenEndpointPtr := flag.String("token_endpoint", parseStringEnvVar("", "O2TOKEN_TOKEN_ENDPOINT"), "Token endpoint")
 	refreshTokenPtr := flag.String("refresh_token", parseStringEnvVar("", "O2TOKEN_REFRESH_TOKEN"), "Refresh token to use when requesting new tokens")
@@ -58,6 +64,16 @@ func initializeAppConfig() (AppConfig, error) {
 	if *statePtr == "" {
 		randStr := genRandStr()
 		statePtr = &randStr
+	}
+	if *pkcePtr {
+		if *codeVerifierPtr == "" {
+			verifierStr := genPkceCodeVerifier()
+			codeVerifierPtr = &verifierStr
+		}
+		if *codeChallengePtr == "" {
+			challengeStr := computePkceCodeChallenge(*codeVerifierPtr)
+			codeChallengePtr = &challengeStr
+		}
 	}
 
 	// Derive unspecified fields based on IDP's metadata
@@ -85,9 +101,12 @@ func initializeAppConfig() (AppConfig, error) {
 		AuthEndpoint:     *authEndpointPtr,
 		CallbackPath:     *callbackPathPtr,
 		ClientID:         *clientIDPtr,
+		CodeChallenge:    *codeChallengePtr,
+		CodeVerifier:     *codeVerifierPtr,
 		ClientSecret:     *clientSecretPtr,
 		MetadataEndpoint: *metadataEndpointPtr,
 		NoBrowser:        *noBrowserPtr,
+		Pkce:             *pkcePtr,
 		Port:             *portPtr,
 		RefreshToken:     *refreshTokenPtr,
 		State:            *statePtr,

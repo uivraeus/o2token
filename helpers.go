@@ -75,6 +75,13 @@ func base64UrlToBase64(input string) string {
 	return result
 }
 
+func base64ToBase64Url(input string) string {
+	result := strings.ReplaceAll(input, "/", "_")
+	result = strings.ReplaceAll(result, "+", "-")
+	result = strings.ReplaceAll(result, "=", "")
+	return result
+}
+
 func prettyJson(jsonStr string) string {
 	// https://stackoverflow.com/a/29046984
 	var pretty bytes.Buffer

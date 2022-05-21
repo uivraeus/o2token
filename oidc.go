@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -65,6 +68,9 @@ func startFlow(w http.ResponseWriter, r *http.Request) {
 	redirectUri := fmt.Sprintf("http://localhost:%v%v", appConfig.Port, appConfig.CallbackPath)
 	scope := url.QueryEscape(appConfig.Scope)
 	url := fmt.Sprintf("%v?client_id=%v&redirect_uri=%v&scope=%v&response_type=code&state=%v", appConfig.AuthEndpoint, appConfig.ClientID, redirectUri, scope, appConfig.State)
+	if appConfig.Pkce {
+		url = fmt.Sprintf("%v&code_challenge=%v&code_challenge_method=S256", url, appConfig.CodeChallenge)
+	}
 	if appConfig.Verbose {
 		fmt.Printf("Redirecting user to authorization endpoint:\n%v\n", url)
 	}
@@ -182,6 +188,9 @@ func redeemTokensWithCode(code string) (OAuthAccessResponse, error) {
 	params.Set("client_id", appConfig.ClientID)
 	params.Set("client_secret", appConfig.ClientSecret)
 	params.Set("code", code)
+	if appConfig.Pkce {
+		params.Set("code_verifier", appConfig.CodeVerifier)
+	}
 
 	return redeemTokens(params)
 }
@@ -257,4 +266,32 @@ func fetchUserInfo(accessToken string) (unstruct, error) {
 	}
 
 	return retVal, nil
+}
+
+// Create a cryptographically random string using the characters A-Z, a-z, 0-9, and
+// the punctuation characters -._~ (hyphen, period, underscore, and tilde), between
+// 43 and 128 characters long.
+// 👉 https://datatracker.ietf.org/doc/html/rfc7636#section-4.1
+func genPkceCodeVerifier() string {
+	codeLen := 50 // skip the randomness here, it's just a testing tool anyway
+	characters := "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+	code := ""
+	s := rand.NewSource(time.Now().UnixNano())
+	r := rand.New(s)
+	getChar := func() string {
+		i := r.Intn(len(characters))
+		return string(characters[i])
+	}
+	for i := 0; i < codeLen; i++ {
+		code = code + getChar()
+	}
+	return code
+}
+
+// "Basically just" a base64url-encoded sha256 on the verifier
+// 👉 https://datatracker.ietf.org/doc/html/rfc7636#section-4.2
+func computePkceCodeChallenge(verifier string) string {
+	hash := sha256.Sum256([]byte(verifier))
+	b64 := base64.StdEncoding.EncodeToString(hash[:])
+	return base64ToBase64Url(b64)
 }
