@@ -7,7 +7,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
+	"strconv"
 	"strings"
+	"time"
 )
 
 //"Unstructured object" (e.g. generic json)
@@ -91,4 +94,25 @@ func prettyJson(jsonStr string) string {
 		return fmt.Sprintf("Invalid JSON: %v", jsonStr)
 	}
 	return pretty.String()
+}
+
+// Add jsonc-style comments with epoch interpretation, i.e. time strings
+// (fail silent for all kinds of error/non-founds)
+func injectEpochFieldComments(jsonStr string, epochKeys []string) string {
+	resultStr := jsonStr
+	for _, keyName := range epochKeys {
+		parsePattern := fmt.Sprintf(`"%v": (?P<Epoch>\d+),?`, keyName)
+		parser := regexp.MustCompile(parsePattern)
+		matches := parser.FindStringSubmatch(jsonStr)
+		if len(matches) == 2 {
+			original := matches[0]
+			epoch, err := strconv.ParseInt(matches[1], 10, 64)
+			if err == nil {
+				dateStr := time.Unix(epoch, 0)
+				replaced := fmt.Sprintf("%v //👈 %v", original, dateStr)
+				resultStr = strings.Replace(resultStr, original, replaced, 1)
+			}
+		}
+	}
+	return resultStr
 }
