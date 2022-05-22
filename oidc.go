@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/sha256"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -32,6 +33,9 @@ type OidcMetadata struct {
 	TokenEndpoint    string `json:"token_endpoint"`
 	UserInfoEndpoint string `json:"userinfo_endpoint"`
 }
+
+//go:embed html/success.html
+var successPage string
 
 func fetchMetadataDocument(metadataUrl string) OidcMetadata {
 	empty := OidcMetadata{}
@@ -119,8 +123,8 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Finally, send a response to redirect the user to the "success" page
-	http.Redirect(w, r, successPath, http.StatusFound)
+	// Finally, send the "success" page as a response
+	serveString(successPage, w)
 
 	// Print result to stdout
 	err = printTokens(tokens)
@@ -130,12 +134,7 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// We're done, give the browser time to process the redirect and then shut down
-	// (Go-routine here so that the callback can end -> serve the redirect)
-	go func() {
-		time.Sleep(1 * time.Second)
-		softExit(0)
-	}()
+	softExit(0)
 }
 
 func refreshTokens(refreshToken string) error {

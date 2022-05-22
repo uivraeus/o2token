@@ -11,21 +11,14 @@ import (
 	"time"
 )
 
-//Embed html for the served endpoints to make the binary self-standing
-
 //go:embed html/index.html
 var indexPage string
 
-//go:embed html/success.html
-var successPage string
-
 var indexPath = "/"
 var loginPath = "/login"
-var successPath = "/success"
 
 func serveAuthCodeFlow() {
 	mux := http.NewServeMux()
-	mux.HandleFunc(successPath, serveEmbeddedPage)
 	mux.HandleFunc(appConfig.CallbackPath, oauth2CodeCallback)
 	mux.HandleFunc(loginPath, startFlow)
 	mux.HandleFunc(indexPath, serveEmbeddedPage)
@@ -66,8 +59,6 @@ func serveAuthCodeFlow() {
 func serveEmbeddedPage(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == indexPath {
 		serveString(indexPage, w)
-	} else if r.URL.Path == successPath {
-		serveString(successPage, w)
 	} else {
 		w.WriteHeader(http.StatusNotFound)
 	}
