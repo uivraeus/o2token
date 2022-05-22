@@ -20,7 +20,7 @@ Or build the binary first
 
 ```shell
 make
-./o2token --help
+bin/o2token --help
 ```
 
 Note that all CLI parameter can be replaced by environment variables starting with `O2TOKEN_`.
@@ -36,7 +36,7 @@ CLI parameters will always have precedence over environment variables.
 By including the `offline_access` and extracting the `refresh_token` from the response it is possible to obtain new tokens, again and again, by running this command (assuming that IDP and client id/secret details are defined via `O2TOKEN_` environment variables).
 
 ```shell
-export O2TOKEN_REFRESH_TOKEN=$(./o2token --verbose=false | tee /dev/tty | jq -r '.refresh_token')
+export O2TOKEN_REFRESH_TOKEN=$(bin/o2token --verbose=false | tee /dev/tty | jq -r '.refresh_token')
 ```
 
 If the `O2TOKEN_REFRESH_TOKEN` variable is empty (e.g. the first time), a normal OAuth2 code flow is initiated. After that the refresh flow will be triggered each time the command is run.

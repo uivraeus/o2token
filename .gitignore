@@ -1,5 +1,4 @@
 .devcontainer
 bak.*
 *dev.env
-o2token
-jwt/jwt
+bin/*
