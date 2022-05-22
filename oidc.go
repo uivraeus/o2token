@@ -92,7 +92,7 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	code := r.FormValue("code")
 	if len(code) == 0 {
-		reportErrorAndSoftExit("oath2 flow error", fmt.Errorf("missing 'code' parameter"), http.StatusBadRequest, w)
+		reportErrorAndSoftExit("oauth2 flow error", fmt.Errorf("missing 'code' parameter"), http.StatusBadRequest, w)
 		return
 	}
 
@@ -107,7 +107,7 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 	// Next, call the idp oauth2 token endpoint to get our tokens
 	tokens, err := redeemTokensWithCode(code)
 	if err != nil {
-		reportErrorAndSoftExit("oath2 flow error", err, http.StatusInternalServerError, w)
+		reportErrorAndSoftExit("oauth2 flow error", err, http.StatusInternalServerError, w)
 		return
 	}
 
@@ -236,11 +236,11 @@ func redeemTokens(params url.Values) (OAuthAccessResponse, error) {
 	bodyBytes, _ := io.ReadAll(res.Body)
 	var tokens OAuthAccessResponse
 	if err := json.Unmarshal(bodyBytes, &tokens); err != nil {
-		return nothing, fmt.Errorf("could not parse JSON response for redeemed tokens: %v", err)
+		return nothing, fmt.Errorf("could not parse JSON response for redeemed tokens: %v, raw body: %v", err, string(bodyBytes))
 	}
 
 	if len(tokens.AccessToken) == 0 {
-		return nothing, fmt.Errorf("no access token received, raw response: %v", string(bodyBytes))
+		return nothing, fmt.Errorf("no access token received, JSON response:\n%v", h.PrettyJson(string(bodyBytes)))
 	}
 	return tokens, nil
 }
