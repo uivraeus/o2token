@@ -174,7 +174,7 @@ func printTokens(tokens OAuthAccessResponse) error {
 		fmt.Printf("\nSuccessful operation, received tokens expire in %v\n", h.SecondsToFriendlyString(tokens.ExpiresIn))
 		interpret := func(token string) string {
 			epochKeys := []string{"iat", "nbf", "exp", "xms_tcdt"} // xms_tcdt is probably azure proprietary
-			return h.InjectEpochFieldComments(h.PrettyJson(h.JwtToString(tokens.AccessToken)), epochKeys)
+			return h.InjectEpochFieldComments(h.PrettyJson(h.JwtToString(token)), epochKeys)
 		}
 		if len(tokens.AccessToken) > 0 {
 			fmt.Printf("\nAccessToken:\n------------\n%v\n", interpret(tokens.AccessToken))
