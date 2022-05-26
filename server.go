@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"time"
 )
@@ -28,7 +27,6 @@ func serveAuthCodeFlow() {
 	server := &http.Server{Addr: portStr, Handler: mux}
 
 	go func() {
-		fmt.Fprintf(os.Stderr, "Serving oauth2 authorization code flow at 👉 %v\n", loginUrlStr)
 		serveErr := server.ListenAndServe()
 		if serveErr != http.ErrServerClosed {
 			fmt.Fprintf(os.Stderr, "ERROR: Unexpected error from HTTP server: %v\n", serveErr)
@@ -36,9 +34,9 @@ func serveAuthCodeFlow() {
 	}()
 
 	go func() {
-		if !appConfig.NoBrowser {
-			time.Sleep(10 * time.Millisecond) // ensure proper print-out order (a bit dirty...)
-			launchBrowser(loginUrlStr)
+		manualLaunch := appConfig.NoBrowser || launchBrowser(loginUrlStr) != nil
+		if manualLaunch {
+			fmt.Fprintf(os.Stderr, "👉 Initiate login flow via your browser at: %v\n", loginUrlStr)
 		}
 	}()
 
@@ -78,15 +76,4 @@ func reportErrorAndSoftExit(label string, err error, code int, w http.ResponseWr
 	}
 	fmt.Fprintln(os.Stderr, msg)
 	softExit(code)
-}
-
-func launchBrowser(url string) {
-	if appConfig.Verbose {
-		fmt.Printf("Launching browser window")
-	}
-	browserCmd := exec.Command("python3", "-m", "webbrowser", "-n", url)
-	err := browserCmd.Run()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Couldn't launch browser automatically; %v\n", err)
-	}
 }
