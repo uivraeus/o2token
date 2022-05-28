@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -15,6 +16,11 @@ var indexPage string
 
 var indexPath = "/"
 var loginPath = "/login"
+
+// Graceful exit after server has been started
+var serverExit = func() {
+	os.Exit(1) // Placeholder until signal capturing has been configured
+}
 
 func serveAuthCodeFlow() {
 	mux := http.NewServeMux()
@@ -40,9 +46,12 @@ func serveAuthCodeFlow() {
 		}
 	}()
 
-	// Setting up signal capturing
+	// Setting up signal capturing and configure special exit-function
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
+	serverExit = func() {
+		stop <- syscall.SIGINT
+	}
 
 	// Waiting for SIGINT (kill -2)
 	<-stop

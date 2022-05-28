@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"syscall"
 )
 
 var appConfig AppConfig
@@ -45,5 +44,5 @@ func softExit(code int) {
 		}
 		exitCode = 125
 	}
-	syscall.Kill(syscall.Getpid(), syscall.SIGINT)
+	serverExit()
 }
