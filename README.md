@@ -29,6 +29,30 @@ Note that all CLI parameter can be replaced by environment variables starting wi
 
 CLI parameters will always have precedence over environment variables.
 
+## No `go` on my system - what can I do?
+
+If you have `docker` you can build the app using the (latest) official `golang` image:
+
+```shell
+docker run -v $(pwd):/workspace -w /workspace golang bash -c "make && chown -R $(id -u):$(id -g) bin"
+```
+
+## Build for other targets, e.g. for Windows or Mac?
+
+Set the environment variables `GOOS` and `GOARCH` prior to invoking `make`
+
+### Example 1 - with `go` locally installed
+
+```shell
+GOOS=windows GOARCH=amd64 make
+```
+
+### Example 2 - in combination with `docker` for the `go` environment
+
+```shell
+docker run -e GOOS=darwin -e GOARCH=arm64 -v $(pwd):/workspace -w /workspace golang bash -c "make && chown -R $(id -u):$(id -g) bin"
+```
+
 ## Examples
 
 ### Eternal refresh loop
