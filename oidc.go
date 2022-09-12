@@ -180,7 +180,7 @@ func printTokens(tokens OAuthAccessResponse) error {
 			fmt.Printf("\nAccessToken:\n------------\n%v\n", interpret(tokens.AccessToken))
 		}
 		if len(tokens.IDToken) > 0 {
-			fmt.Printf("\nIDoken:\n-------\n%v\n", interpret(tokens.IDToken))
+			fmt.Printf("\nID-Token:\n---------\n%v\n", interpret(tokens.IDToken))
 		}
 	}
 	return nil
