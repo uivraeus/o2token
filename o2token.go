@@ -32,7 +32,7 @@ func main() {
 	}
 }
 
-// Initiate a controlled shutdown of the application (allow for gracefull http server teardown)
+// Initiate a controlled shutdown of the application (allow for graceful http server teardown)
 // ❗This is NOT a blocking function - it will return control to the caller!
 func softExit(code int) {
 	// For some portability reason the exit code must be in [0-125]

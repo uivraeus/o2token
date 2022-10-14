@@ -1,4 +1,6 @@
 .devcontainer
 bak.*
-*dev.env
+dev.env
 bin/*
+bin-*/
+o2token

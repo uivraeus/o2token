@@ -30,9 +30,13 @@ func serveAuthCodeFlow() {
 
 	portStr := fmt.Sprintf(":%v", appConfig.Port)
 	loginUrlStr := fmt.Sprintf("http://localhost%v/login\n", portStr)
-	server := &http.Server{Addr: portStr, Handler: mux}
+	addrStr := fmt.Sprintf("%v%v", appConfig.Address, portStr)
+	server := &http.Server{Addr: addrStr, Handler: mux}
 
 	go func() {
+		if appConfig.Verbose {
+			fmt.Printf("Listen and serve at %v\n", addrStr)
+		}
 		serveErr := server.ListenAndServe()
 		if serveErr != http.ErrServerClosed {
 			fmt.Fprintf(os.Stderr, "ERROR: Unexpected error from HTTP server: %v\n", serveErr)

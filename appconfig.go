@@ -12,6 +12,7 @@ import (
 )
 
 type AppConfig struct {
+	Address          string `json:"address"`
 	AuthEndpoint     string `json:"auth_endpoint"`
 	CallbackPath     string `json:"callback_path"`
 	ClientID         string `json:"client_id"`
@@ -37,6 +38,7 @@ func initializeAppConfig() (AppConfig, error) {
 	// - specified variables (CLI or ENV) will never be automatically derived
 
 	// Read from CLI or ENV (let ENV show as default if defined - but not for random/secret fields because they show up in --help)
+	addressPtr := flag.String("address", parseStringEnvVar("127.0.0.1", "O2TOKEN_ADDRESS"), "Address to bind to for local server")
 	authEndpointPtr := flag.String("auth-endpoint", parseStringEnvVar("", "O2TOKEN_AUTH_ENDPOINT"), "Authorization endpoint")
 	callbackPathPtr := flag.String("callback-path", parseStringEnvVar("/oauth2/callback", "O2TOKEN_CALLBACK_PATH"), "Oauth2 callback path")
 	clientIDPtr := flag.String("client-id", parseStringEnvVar("", "O2TOKEN_CLIENT_ID"), "Client (aka application) id ")
@@ -98,6 +100,7 @@ func initializeAppConfig() (AppConfig, error) {
 	scopeStr := strings.ReplaceAll(*scopePtr, ",", " ")
 
 	config := AppConfig{
+		Address:          *addressPtr,
 		AuthEndpoint:     *authEndpointPtr,
 		CallbackPath:     *callbackPathPtr,
 		ClientID:         *clientIDPtr,
