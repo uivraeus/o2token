@@ -49,6 +49,20 @@ GOOS=windows GOARCH=amd64 make
 
 ### Example 2 - in combination with `docker` for the `go` environment
 
+#### For Linux
+
+```shell
+docker run -e GOOS=linux -e GOARCH=amd64 -v $(pwd):/workspace -w /workspace golang bash -c "make && chown -R $(id -u):$(id -g) bin"
+```
+
+#### For Windows
+
+```shell
+docker run -e GOOS=windows -e GOARCH=amd64 -v $(pwd):/workspace -w /workspace golang bash -c "make && chown -R $(id -u):$(id -g) bin"
+```
+
+#### For Mac
+
 ```shell
 docker run -e GOOS=darwin -e GOARCH=arm64 -v $(pwd):/workspace -w /workspace golang bash -c "make && chown -R $(id -u):$(id -g) bin"
 ```
@@ -64,4 +78,3 @@ export O2TOKEN_REFRESH_TOKEN=$(bin/o2token --verbose=false | tee /dev/tty | jq -
 ```
 
 If the `O2TOKEN_REFRESH_TOKEN` variable is empty (e.g. the first time), a normal OAuth2 code flow is initiated. After that the refresh flow will be triggered each time the command is run.
-
