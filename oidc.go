@@ -88,12 +88,22 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("Processing callback for authorization code\n")
 	}
 
-	// First, we need to get the value of the `code` query param
+	// Parse query parameters
 	err := r.ParseForm()
 	if err != nil {
 		reportErrorAndSoftExit("could not parse query in callback", err, http.StatusBadRequest, w)
 		return
 	}
+
+	// First check that we didn't encounter and error
+	errorParam := r.FormValue("error")
+	errorDescriptionParam := r.FormValue("error_description")
+	if len(errorParam) != 0 {
+		reportErrorAndSoftExit("error response from identity provider", fmt.Errorf("%v: %v", errorParam, errorDescriptionParam), http.StatusBadRequest, w)
+		return
+	}
+
+	// Fetch the "code" param needed to redeem the token(s)
 	code := r.FormValue("code")
 	if len(code) == 0 {
 		reportErrorAndSoftExit("oauth2 flow error", fmt.Errorf("missing 'code' parameter"), http.StatusBadRequest, w)
@@ -135,6 +145,21 @@ func oauth2CodeCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	softExit(0)
+}
+
+func clientCredFlow() error {
+	tokens, err := redeemTokensWithClientCredentials()
+	if err != nil {
+		return fmt.Errorf("could not redeem tokens: %v", err)
+	}
+
+	// Print result to stdout
+	err = printTokens(tokens)
+	if err != nil {
+		return fmt.Errorf("output error: %v", err)
+	}
+
+	return nil
 }
 
 func refreshTokens(refreshToken string) error {
@@ -196,6 +221,16 @@ func redeemTokensWithCode(code string) (OAuthAccessResponse, error) {
 	if appConfig.Pkce {
 		params.Set("code_verifier", appConfig.CodeVerifier)
 	}
+
+	return redeemTokens(params)
+}
+
+func redeemTokensWithClientCredentials() (OAuthAccessResponse, error) {
+	params := url.Values{}
+	params.Set("grant_type", "client_credentials")
+	params.Set("client_id", appConfig.ClientID)
+	params.Set("client_secret", appConfig.ClientSecret)
+	params.Set("scope", appConfig.Scope)
 
 	return redeemTokens(params)
 }

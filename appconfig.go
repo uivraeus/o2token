@@ -15,6 +15,7 @@ type AppConfig struct {
 	Address          string `json:"address"`
 	AuthEndpoint     string `json:"auth_endpoint"`
 	CallbackPath     string `json:"callback_path"`
+	ClientCredFlow   bool   `json:"client_cred_flow"`
 	ClientID         string `json:"client_id"`
 	ClientSecret     string `json:"client_secret"`
 	CodeChallenge    string `json:"code_challenge"`
@@ -41,6 +42,7 @@ func initializeAppConfig() (AppConfig, error) {
 	addressPtr := flag.String("address", parseStringEnvVar("127.0.0.1", "O2TOKEN_ADDRESS"), "Address to bind to for local server")
 	authEndpointPtr := flag.String("auth-endpoint", parseStringEnvVar("", "O2TOKEN_AUTH_ENDPOINT"), "Authorization endpoint")
 	callbackPathPtr := flag.String("callback-path", parseStringEnvVar("/oauth2/callback", "O2TOKEN_CALLBACK_PATH"), "Oauth2 callback path")
+	clientCredFlowPtr := flag.Bool("client-cred-flow", parseBoolEnvVar(false, "O2TOKEN_CLIENT_CRED_FLOW"), "Use \"client credentials\" flow (not the \"code\" flow)")
 	clientIDPtr := flag.String("client-id", parseStringEnvVar("", "O2TOKEN_CLIENT_ID"), "Client (aka application) id ")
 	clientSecretPtr := flag.String("client-secret", "", "Client secret (if applicable)")
 	codeChallengePtr := flag.String("code-challenge", "", "PKCE Code Challenge (default <derived from verifier> when PKCE is enabled)")
@@ -103,6 +105,7 @@ func initializeAppConfig() (AppConfig, error) {
 		Address:          *addressPtr,
 		AuthEndpoint:     *authEndpointPtr,
 		CallbackPath:     *callbackPathPtr,
+		ClientCredFlow:   *clientCredFlowPtr,
 		ClientID:         *clientIDPtr,
 		CodeChallenge:    *codeChallengePtr,
 		CodeVerifier:     *codeVerifierPtr,

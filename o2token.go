@@ -21,7 +21,13 @@ func main() {
 		os.Exit(1)
 	}
 
-	if appConfig.RefreshToken != "" {
+	if appConfig.ClientCredFlow {
+		err := clientCredFlow()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ERROR: client credentials flow failed: %v\n", err)
+			os.Exit(1)
+		}
+	} else if appConfig.RefreshToken != "" {
 		err := refreshTokens(appConfig.RefreshToken)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: token refresh failed: %v\n", err)
