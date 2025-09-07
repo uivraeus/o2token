@@ -16,11 +16,10 @@ build: build_o2token build_jwt
 	@ls -1sh bin/*
 
 build_o2token:
-	go build -o bin/o2token${OUTPUT_SUFFIX}
+	go build -buildvcs=false -o bin/o2token${OUTPUT_SUFFIX}
 
 build_jwt:
-	cd jwt && go build -o ../bin/jwt${OUTPUT_SUFFIX}
+	cd jwt && go build -buildvcs=false -o ../bin/jwt${OUTPUT_SUFFIX}
 
 run:
 	go run .
-	
